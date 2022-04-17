@@ -1,2 +1,2 @@
-# LoRa code for LoRa module on an arduino board 
+# SAMD21 with RFM95W
 
