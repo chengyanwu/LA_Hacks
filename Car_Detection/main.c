@@ -49,6 +49,8 @@
 #include "sampledata.h"
 #include "mxc_delay.h"
 #include "camera.h"
+#include "uart.h"
+
 #ifdef BOARD_EVKIT_V1
 #include "bitmap.h"
 #include "tft_ssd2119.h"
@@ -64,6 +66,16 @@
 #define IMAGE_SIZE_X  (64)
 #define IMAGE_SIZE_Y  (64)
 #define CAMERA_FREQ   (10 * 1000 * 1000)
+
+
+#define UART_BAUD           2400
+#ifdef BOARD_EVKIT_V1
+#define READING_UART        1
+#define WRITING_UART        2
+#else
+#define READING_UART        1
+#define WRITING_UART        2
+#endif
 
 #define TFT_BUFF_SIZE   30    // TFT buffer size
 
@@ -87,6 +99,8 @@ uint32_t input_0_camera[1024];
 uint32_t input_1_camera[1024];
 uint32_t input_2_camera[1024];
 
+char result[6] = "";
+
 void fail(void)
 {
     printf("\n*** FAIL ***\n\n");
@@ -100,6 +114,28 @@ static const uint32_t input_0[] = INPUT_0;
 static const uint32_t input_1[] = INPUT_1;
 static const uint32_t input_2[] = INPUT_2;
 #endif
+
+/* **************************************************************************** */
+void send_through_UART(char* tx_data)
+{
+  int error, i, fail = 0;
+
+  if((error = MXC_UART_Init(MXC_UART_GET_UART(WRITING_UART), UART_BAUD, MXC_UART_APB_CLK)) != E_NO_ERROR) {
+        printf("-->Error initializing UART: %d\n", error);
+        printf("-->Example Failed\n");
+        while (1) {}
+    }
+
+  
+    mxc_uart_req_t write_req;
+    write_req.uart = MXC_UART_GET_UART(WRITING_UART);
+    write_req.txData = tx_data;
+    write_req.txLen = BUFF_SIZE;
+    write_req.rxLen = 0;
+    write_req.callback = NULL;
+
+    MXC_UART_Transaction(&write_req);
+}
 
 /* **************************************************************************** */
 void cnn_load_input(void)
@@ -479,17 +515,22 @@ int main(void)
         if (result[0] > result[1]) {
             TFT_Print(buff, 195, 150, font_1, sprintf(buff, "CAT"));
             TFT_Print(buff, 135, 180, font_1, sprintf(buff, "%d%%", result[0]));
+            result = "car";
+            
         }
         else if (result[1] > result[0]) {
             TFT_Print(buff, 195, 150, font_1, sprintf(buff, "DOG"));
             TFT_Print(buff, 135, 180, font_1, sprintf(buff, "%d%%", result[1]));
+            result = "noncar";
         }
         else {
             TFT_Print(buff, 195, 150, font_1, sprintf(buff, "Unknown"));
             memset(buff, 32, TFT_BUFF_SIZE);
             TFT_Print(buff, 135, 180, font_1, sprintf(buff, "NA"));
+            result = "unkown";
         }
-
+        
+        send_through_UART(result);
         TFT_Print(buff, 10, 210, font_1, sprintf(buff, "PRESS PB1 TO CAPTURE IMAGE"));
 #endif
     }
