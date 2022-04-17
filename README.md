@@ -1,1 +1,2 @@
-# LA_Hacks
+# LA Hacks Project
+
